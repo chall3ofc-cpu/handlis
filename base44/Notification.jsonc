@@ -1,0 +1,51 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "price_drop",
+        "discovered_receipt",
+        "info"
+      ],
+      "default": "info",
+      "description": "Typ av notis"
+    },
+    "title": {
+      "type": "string",
+      "description": "Kort rubrik"
+    },
+    "body": {
+      "type": "string",
+      "description": "Br\u00f6dtext"
+    },
+    "related_id": {
+      "type": "string",
+      "description": "Relaterat objekt-id (t.ex. prisbevakning)"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Om notisen markerats som l\u00e4st"
+    }
+  },
+  "required": [
+    "type",
+    "title"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,71 @@
+const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
+
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+
+export default async function(req: Request): Promise<Response> {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await db.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await req.json();
+    const products = body?.products;
+    if (!Array.isArray(products) || products.length === 0) {
+      return Response.json({ insights: [], summary: 'Handlis lär fortfarande känna dina köp.' });
+    }
+
+    const productList = products
+      .map((p, i) => `${i + 1}. ${p.name}${p.weight ? ' (' + p.weight + ')' : ''} – brukar kosta ${p.usual_price} kr${p.usual_store ? ' på ' + p.usual_store : ''}`)
+      .join('\n');
+
+    const prompt = `Du är Handlis, en personlig köp- och sparassistent. Användaren köper ofta följande produkter:
+
+${productList}
+
+Använd aktuell information från internet för att hitta VERKLIGA aktuella priser för dessa produkter på svenska butiker (Willys, ICA, Coop, Hemköp, Lidl, City Gross m.fl.).
+
+Regler:
+- Hitta ALDRIG på priser. Om du inte kan hitta ett verkligt aktuellt pris för en produkt, hoppa över den.
+- Skapa bara en insikt om du hittar ett verkligt billigare pris än användarens vanliga pris, eller en tydlig prisförändring.
+- Ange alltid butiken där det aktuella priset gäller och när det kontrollerades (dagens datum).
+- Matcha produkten korrekt (rätt vikt/variant).
+
+Svara ENBART med JSON enligt schemat. Om inga verkliga insikter hittas, returnera en tom insights-array.`;
+
+    const result = await db.asServiceRole.integrations.Core.InvokeLLM({
+      prompt,
+      add_context_from_internet: true,
+      model: 'gemini_3_flash',
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          insights: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                product: { type: 'string' },
+                usual_price: { type: 'number' },
+                usual_store: { type: 'string' },
+                current_price: { type: 'number' },
+                current_store: { type: 'string' },
+                savings: { type: 'number' },
+                message: { type: 'string' },
+                checked_at: { type: 'string' }
+              }
+            }
+          },
+          summary: { type: 'string' }
+        },
+        required: ['insights']
+      }
+    });
+
+    return Response.json(result);
+  } catch (error) {
+    return Response.json(
+      { technical_error: true, message: error?.message || 'Kunde inte hämta insikter just nu.' },
+      { status: 500 }
+    );
+  }
+}

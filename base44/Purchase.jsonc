@@ -1,0 +1,86 @@
+{
+  "name": "Purchase",
+  "type": "object",
+  "properties": {
+    "store": {
+      "type": "string",
+      "description": "Butiken eller utf\u00e4rdaren av kvittot"
+    },
+    "purchase_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Datum och tid f\u00f6r k\u00f6pet"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "string",
+            "description": "Vikt eller m\u00e4ngd, t.ex. 500 g, 1 kg, 2 st"
+          },
+          "quantity": {
+            "type": "number",
+            "default": 1
+          },
+          "price": {
+            "type": "number",
+            "description": "Pris per rad i SEK"
+          }
+        },
+        "required": [
+          "name",
+          "price"
+        ]
+      }
+    },
+    "total": {
+      "type": "number",
+      "description": "Totalbelopp i SEK"
+    },
+    "currency": {
+      "type": "string",
+      "default": "SEK"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "scan",
+        "email",
+        "manual"
+      ],
+      "default": "scan"
+    },
+    "receipt_image_url": {
+      "type": "string",
+      "description": "URL till kvittobilden om skannad"
+    },
+    "raw_text": {
+      "type": "string",
+      "description": "R\u00e5text extraherad fr\u00e5n kvittot"
+    }
+  },
+  "required": [
+    "store",
+    "purchase_date",
+    "total"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "PriceWatch",
+  "type": "object",
+  "properties": {
+    "product_name": {
+      "type": "string",
+      "description": "Produktnamn att bevaka"
+    },
+    "weight": {
+      "type": "string",
+      "description": "Vikt/storlek f\u00f6r att matcha r\u00e4tt variant"
+    },
+    "current_price": {
+      "type": "number",
+      "description": "Senast k\u00e4nda pris i SEK"
+    },
+    "target_price": {
+      "type": "number",
+      "description": "\u00d6nskat m\u00e5lpris i SEK"
+    },
+    "store": {
+      "type": "string",
+      "description": "Butik d\u00e4r priset g\u00e4ller"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "triggered"
+      ],
+      "default": "active"
+    },
+    "last_checked": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "product_name",
+    "target_price"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}

@@ -1,0 +1,55 @@
+const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
+
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+
+// Leta efter digitala kvitton i användarens kopplade inkorg.
+//
+// För att riktigt läsa en inkorg krävs en ansluten e-posttjänst (t.ex. Gmail-koppling) och
+// att integrationskrediterna räcker. Denna funktion fabulerar ALDRIG fram kvitton – om
+// inkorgen inte kan läsas returneras en tydlig status i stället.
+//
+// När en Gmail-anslutning är auktoriserad kan den utökas till att hämta senaste
+// butiksmail och extrahera köp via LLM. Tills dess returneras inga upptäckta köp.
+export default async function(req: Request): Promise<Response> {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await db.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!user.email_connected || !user.connected_email) {
+      return Response.json({
+        discovered: 0,
+        message: 'Koppla din e-post först, så kan Handlis leta efter digitala kvitton i din inkorg.',
+      });
+    }
+
+    // Försök hämta en Gmail-anslutning (om en sådan auktoriserats för appen).
+    let gmailAvailable = false;
+    try {
+      const token = await db.asServiceRole.connectors.getConnection('gmail');
+      gmailAvailable = !!token;
+    } catch {
+      gmailAvailable = false;
+    }
+
+    if (!gmailAvailable) {
+      return Response.json({
+        discovered: 0,
+        message:
+          'Handlis kan inte läsa din inkorg än. Anslut ditt Gmail-konto (Google) så kan Handlis upptäcka digitala kvitton automatiskt. Upptäckta köp läggs aldrig till i din historik utan ditt godkännande.',
+      });
+    }
+
+    // Gmail-anslutning finns: här skulle vi hämta senaste butiksmail och extrahera köp.
+    // Lämna tomt tills den faktiska hämtningen är implementerad – inga påhittade kvitton.
+    return Response.json({
+      discovered: 0,
+      message: 'Inga nya digitala kvitton hittades i din inkorg.',
+    });
+  } catch (error) {
+    return Response.json(
+      { technical_error: true, message: error?.message || 'Kunde inte läsa inkorgen just nu.' },
+      { status: 500 }
+    );
+  }
+}

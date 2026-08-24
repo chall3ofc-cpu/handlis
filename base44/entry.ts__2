@@ -1,0 +1,83 @@
+const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
+
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+
+// Gå igenom användarens AKTIVA prisbevakningar, hämta aktuellt verkligt pris för varje,
+// uppdatera current_price/last_checked och skapa en notis (type: price_drop) om priset
+// nått eller gått under målpriset. Skapar inga påhittade priser.
+export default async function(req: Request): Promise<Response> {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await db.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const watches = await db.entities.PriceWatch.filter({ status: 'active' });
+    if (!watches || watches.length === 0) {
+      return Response.json({ checked: 0, triggered: 0, message: 'Inga aktiva bevakningar.' });
+    }
+
+    let triggered = 0;
+    const today = new Date().toISOString().slice(0, 10);
+
+    for (const w of watches) {
+      const q = [w.product_name, w.weight].filter(Boolean).join(' ');
+      try {
+        const result = await db.asServiceRole.integrations.Core.InvokeLLM({
+          prompt: `Hitta det VERKLIGA, AKTUELLA lägsta priset för "${q}" hos svenska butikskedjor (Willys, ICA, Hemköp, Coop, Tempo, Lidl m.fl.). Använd butikskedjans generella namn. Hitta ALDRIG på ett pris. Svara ENBART med JSON: {"found": boolean, "best_price": number|null, "store": string|null, "checked_at": "${today}"}.`,
+          add_context_from_internet: true,
+          model: 'gemini_3_flash',
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              found: { type: 'boolean' },
+              best_price: { type: 'number' },
+              store: { type: 'string' },
+              checked_at: { type: 'string' },
+            },
+            required: ['found'],
+          },
+        });
+
+        if (!result?.found || typeof result.best_price !== 'number') {
+          await db.entities.PriceWatch.update(w.id, { last_checked: new Date().toISOString() });
+          continue;
+        }
+
+        const price = result.best_price;
+        const hit = price <= (w.target_price ?? 0);
+
+        await db.entities.PriceWatch.update(w.id, {
+          current_price: price,
+          store: result.store || w.store || '',
+          last_checked: new Date().toISOString(),
+          status: hit ? 'triggered' : 'active',
+        });
+
+        if (hit) {
+          triggered += 1;
+          await db.asServiceRole.entities.Notification.create({
+            type: 'price_drop',
+            title: '🔔 Prisfall',
+            body: `${w.product_name}${w.weight ? ' ' + w.weight : ''} kostar nu ${price} kr på ${result.store || 'en butik'}. Ditt målpris var ${w.target_price} kr.`,
+            related_id: w.id,
+            read: false,
+            created_by_id: user.id,
+          });
+        }
+      } catch (e) {
+        // Enskild bevakning misslyckades – fortsätt med nästa. Skapar inga falska notiser.
+      }
+    }
+
+    return Response.json({
+      checked: watches.length,
+      triggered,
+      message: triggered > 0 ? `${triggered} prisbevakning(ar) triggrades!` : 'Inga prisfall just nu.',
+    });
+  } catch (error) {
+    return Response.json(
+      { technical_error: true, message: error?.message || 'Kunde inte kontrollera prisbevakningar just nu.' },
+      { status: 500 }
+    );
+  }
+}

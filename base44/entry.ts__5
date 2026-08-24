@@ -1,0 +1,72 @@
+const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
+
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+
+export default async function(req: Request): Promise<Response> {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await db.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await req.json();
+    const query = body?.query;
+    if (!query || typeof query !== 'string') {
+      return Response.json({ error: 'query krävs' }, { status: 400 });
+    }
+
+    const prompt = `Du är en prisjämförelseassistent för svenska dagligvarubutiker och andra svenska butiker. Använd aktuell information från internet för att hitta VERKLIGA, AKTUELLA priser för produkten: "${query}".
+
+Sök i första hand hos dessa butikskedjor: Willys, ICA, Hemköp, Coop, Tempo och Lidl. Om produkten säljs hos andra tydliga svenska butiker (t.ex. City Gross, Axfood, Apoteket, Mat.se) kan de också visas.
+
+REGLER:
+- Hitta ENDAST priser som faktiskt finns på riktiga svenska butikers webbplatser just nu. Hitta ALDRIG på, uppskatta eller konstruera ett pris.
+- Om du inte kan hitta ett verkligt aktuellt pris, sätt found=false och förklara i note.
+- Visa ALLA relevanta varianter som faktiskt finns hos en butik (t.ex. olika storlekar, ekologisk variant, familjepack, 3-pack). En 340 g-burk och en 500 g-burk är OLIKA produkter – visa båda separat med sin vikt.
+- Visa alltid vikt/mängd i weight (t.ex. "340 g", "3-pack", "500 g").
+- Ange jämförpris i compare_price om butiken visar det (t.ex. "44 kr/kg", "15 kr/st"). Om jämförpris inte finns, lämna tomt.
+- Ange eventuell rabatt/erbjudande i offer (t.ex. "3 för 40 kr", "Veckans erbjudande").
+- store ska vara BUTIKSKEDJANS generella namn: "Willys", "ICA", "Hemköp", "Coop", "Tempo", "Lidl", "City Gross" osv. Använd ALDRIG specifika butiksnamn, adresser eller stadsdelar (t.ex. skriv "ICA", inte "ICA Maxi Högalid").
+- checked_at = dagens datum (ISO, YYYY-MM-DD).
+- Returnera max 8 resultat, sorterat med lägst pris först.
+
+Svara ENBART med JSON enligt schemat.`;
+
+    const result = await db.asServiceRole.integrations.Core.InvokeLLM({
+      prompt,
+      add_context_from_internet: true,
+      model: 'gemini_3_flash',
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          found: { type: 'boolean' },
+          product_name: { type: 'string' },
+          results: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                store: { type: 'string' },
+                product_name: { type: 'string' },
+                weight: { type: 'string' },
+                price: { type: 'number' },
+                compare_price: { type: 'string' },
+                offer: { type: 'string' },
+                checked_at: { type: 'string' }
+              }
+            }
+          },
+          note: { type: 'string' }
+        },
+        required: ['found']
+      }
+    });
+
+    return Response.json(result);
+  } catch (error) {
+    // Tekniskt fel (API-fel, rate limit, integrationsgräns) – inte samma som "inget pris hittades".
+    return Response.json(
+      { technical_error: true, message: error?.message || 'Ett tekniskt fel gjorde att vi inte kunde söka just nu.' },
+      { status: 500 }
+    );
+  }
+}

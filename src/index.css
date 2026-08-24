@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Varm, hemtrevlig palett */
+    --background: 38 30% 97%;
+    --foreground: 30 12% 22%;
+    --card: 40 33% 99%;
+    --card-foreground: 30 12% 22%;
+    --popover: 40 33% 99%;
+    --popover-foreground: 30 12% 22%;
+    --primary: 95 14% 42%;
+    --primary-foreground: 40 30% 98%;
+    --secondary: 38 28% 90%;
+    --secondary-foreground: 30 14% 28%;
+    --muted: 38 22% 92%;
+    --muted-foreground: 32 8% 42%;
+    --accent: 28 38% 58%;
+    --accent-foreground: 30 20% 99%;
+    --destructive: 8 58% 52%;
+    --destructive-foreground: 40 30% 98%;
+    --border: 38 18% 86%;
+    --input: 38 18% 86%;
+    --ring: 95 14% 42%;
+    --chart-1: 95 14% 42%;
+    --chart-2: 28 38% 58%;
+    --chart-3: 38 30% 60%;
+    --chart-4: 12 30% 55%;
+    --chart-5: 200 10% 50%;
+    --radius: 0.75rem;
+    --font-heading: 'Fraunces', ui-serif, Georgia, serif;
+    --font-body: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Fraunces', ui-serif, Georgia, serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --sidebar-background: 40 34% 96%;
+    --sidebar-foreground: 30 12% 24%;
+    --sidebar-primary: 95 14% 42%;
+    --sidebar-primary-foreground: 40 30% 98%;
+    --sidebar-accent: 38 28% 90%;
+    --sidebar-accent-foreground: 30 14% 28%;
+    --sidebar-border: 38 18% 86%;
+    --sidebar-ring: 95 14% 42%;
+  }
+
+  .dark {
+    --background: 30 10% 12%;
+    --foreground: 38 24% 92%;
+    --card: 32 10% 16%;
+    --card-foreground: 38 24% 92%;
+    --popover: 32 10% 16%;
+    --popover-foreground: 38 24% 92%;
+    --primary: 95 14% 52%;
+    --primary-foreground: 30 10% 12%;
+    --secondary: 32 8% 22%;
+    --secondary-foreground: 38 24% 92%;
+    --muted: 32 8% 22%;
+    --muted-foreground: 38 12% 62%;
+    --accent: 28 30% 52%;
+    --accent-foreground: 40 30% 98%;
+    --destructive: 8 50% 52%;
+    --destructive-foreground: 40 30% 98%;
+    --border: 32 8% 26%;
+    --input: 32 8% 26%;
+    --ring: 95 14% 52%;
+    --sidebar-background: 30 10% 14%;
+    --sidebar-foreground: 38 24% 92%;
+    --sidebar-primary: 95 14% 52%;
+    --sidebar-primary-foreground: 30 10% 12%;
+    --sidebar-accent: 32 8% 22%;
+    --sidebar-accent-foreground: 38 24% 92%;
+    --sidebar-border: 32 8% 26%;
+    --sidebar-ring: 95 14% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-heading;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}

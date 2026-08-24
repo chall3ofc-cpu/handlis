@@ -1,0 +1,87 @@
+{
+  "name": "DiscoveredPurchase",
+  "type": "object",
+  "properties": {
+    "store": {
+      "type": "string",
+      "description": "Butiken som kvittot kommer ifr\u00e5n"
+    },
+    "purchase_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Datum och tid f\u00f6r k\u00f6pet"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "default": 1
+          },
+          "price": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "price"
+        ]
+      }
+    },
+    "total": {
+      "type": "number",
+      "description": "Totalbelopp i SEK"
+    },
+    "currency": {
+      "type": "string",
+      "default": "SEK"
+    },
+    "source_email": {
+      "type": "string",
+      "description": "E-postadressen kvittot uppt\u00e4cktes fr\u00e5n"
+    },
+    "raw_text": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "ignored"
+      ],
+      "default": "pending"
+    },
+    "message_id": {
+      "type": "string",
+      "description": "Unikt id f\u00f6r e-postmeddelandet (f\u00f6r att undvika dubbletter)"
+    }
+  },
+  "required": [
+    "store",
+    "purchase_date",
+    "total"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
